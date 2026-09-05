@@ -7,6 +7,16 @@
 <meta name="description" content="把 DeepSeek Harness 的 Web 界面装进原生桌面窗口，双击即用。自动更新 · agent-loop 无限续跑 · 磁盘友善。" />
 <meta property="og:title" content="TDSH — DeepSeek Harness 原生桌面壳" />
 <meta property="og:description" content="自动更新 · agent-loop 无限续跑 · 磁盘友善。把 DeepSeek Harness 装进一个原生窗口，双击即用。" />
+<meta property="og:type" content="website" />
+<meta property="og:url" content="https://tuantuan0218.github.io/tdsh-landing/" />
+<meta property="og:image" content="https://tuantuan0218.github.io/tdsh-landing/shot.png" />
+<meta property="og:locale" content="zh_CN" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="TDSH — DeepSeek Harness 原生桌面壳" />
+<meta name="twitter:description" content="自动更新 · agent-loop 无限续跑 · 磁盘友善。把 DeepSeek Harness 装进一个原生窗口，双击即用。" />
+<meta name="twitter:image" content="https://tuantuan0218.github.io/tdsh-landing/shot.png" />
+<meta name="robots" content="index, follow" />
+<link rel="icon" type="image/svg+xml" href="favicon.svg" />
 <style>
 :root {
   --bg: #0b0f1a;
@@ -371,7 +381,8 @@ footer { border-top: 1px solid var(--line-soft); padding: 40px 0 60px; color: va
         <input type="email" name="email" placeholder="your@email.com" required />
         <button type="submit">订阅</button>
       </form>
-      <div class="sub-ok" id="subOk">✓ 订阅成功，感谢支持！</div>
+      <div class="sub-ok" id="subOk"></div>
+      <p style="margin-top:22px;font-size:13px;color:var(--ink-faint);position:relative">也可以先给项目点个星，支持持续开发：<a href="https://github.com/tuantuan0218/TDSH" target="_blank" rel="noopener" style="font-weight:600">GitHub ⭐</a></p>
     </div>
   </div>
 </section>
@@ -398,11 +409,12 @@ document.getElementById('subForm').addEventListener('submit', function (e) {
   e.preventDefault();
   var email = this.elements.email.value.trim();
   if (!email) return;
-  // 订阅收集：目前前端占位。接入真实端点后在此提交 email。
+  var form = this;
   var ok = document.getElementById('subOk');
+  ok.textContent = '✓ 已记录 ' + email + '，订阅收集即将上线。可先关注 GitHub ⭐ 获取更新。';
   ok.style.display = 'block';
-  this.style.display = 'none';
-  setTimeout(function () { ok.style.display = 'none'; this.style.display = 'flex'; }, 4000);
+  form.style.display = 'none';
+  setTimeout(function () { ok.style.display = 'none'; form.style.display = 'flex'; }, 6000);
 });
 </script>
 </body>
