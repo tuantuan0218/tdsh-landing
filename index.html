@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>TDSH — DeepSeek Harness 原生桌面壳</title>
+<meta name="description" content="把 DeepSeek Harness 的 Web 界面装进原生桌面窗口，双击即用。自动更新 · agent-loop 无限续跑 · 磁盘友善。" />
+<meta property="og:title" content="TDSH — DeepSeek Harness 原生桌面壳" />
+<meta property="og:description" content="自动更新 · agent-loop 无限续跑 · 磁盘友善。把 DeepSeek Harness 装进一个原生窗口，双击即用。" />
+<style>
+:root {
+  --bg: #0b0f1a;
+  --bg-soft: #0e1424;
+  --panel: #111a2e;
+  --panel-2: #0f1626;
+  --line: #1e2a44;
+  --line-soft: #182338;
+  --ink: #eef3ff;
+  --ink-dim: #aab6d4;
+  --ink-faint: #7c88a8;
+  --accent: #6187d8;
+  --accent-soft: #8fb0ee;
+  --mint: #a8d9bd;
+  --sea: #4c8f8e;
+  --amber: #e7c37a;
+  --rose: #a93d56;
+  --radius: 18px;
+  --radius-sm: 12px;
+  --maxw: 1080px;
+  --shadow: 0 20px 60px rgba(0,0,0,.45);
+  --serif: "Noto Serif SC", "Songti SC", "Microsoft YaHei", Georgia, serif;
+  --sans: "Noto Sans SC", "Microsoft YaHei", "PingFang SC", system-ui, -apple-system, sans-serif;
+  --mono: "JetBrains Mono", "SF Mono", Menlo, Consolas, monospace;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  font-family: var(--sans);
+  background: var(--bg);
+  color: var(--ink);
+  line-height: 1.6;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+a { color: var(--accent-soft); text-decoration: none; }
+a:hover { color: var(--ink); }
+
+/* ---------- background decor ---------- */
+.bg-grid {
+  position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  background-image:
+    radial-gradient(circle at 50% -10%, rgba(97,135,216,.16), transparent 55%),
+    radial-gradient(circle at 85% 110%, rgba(76,143,142,.10), transparent 50%),
+    linear-gradient(var(--line-soft) 1px, transparent 1px),
+    linear-gradient(90deg, var(--line-soft) 1px, transparent 1px);
+  background-size: 100% 100%, 100% 100%, 46px 46px, 46px 46px;
+  mask-image: radial-gradient(ellipse 90% 80% at 50% 20%, black 30%, transparent 75%);
+  opacity: .5;
+}
+.glow-orb { position: fixed; border-radius: 50%; filter: blur(90px); opacity: .5; z-index: 0; pointer-events: none; }
+.glow-orb.o1 { width: 420px; height: 420px; top: -140px; left: 8%; background: #27406f; }
+.glow-orb.o2 { width: 340px; height: 340px; bottom: -120px; right: 4%; background: #1f4a48; }
+
+.container { position: relative; z-index: 1; max-width: var(--maxw); margin: 0 auto; padding: 0 24px; }
+
+/* ---------- nav ---------- */
+.nav {
+  position: sticky; top: 0; z-index: 20;
+  backdrop-filter: blur(14px);
+  background: rgba(11,15,26,.72);
+  border-bottom: 1px solid var(--line-soft);
+}
+.nav-inner { display: flex; align-items: center; gap: 16px; max-width: var(--maxw); margin: 0 auto; padding: 14px 24px; }
+.brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 17px; letter-spacing: .5px; }
+.brand .whale { width: 26px; height: 26px; display: block; }
+.brand .whale svg { width: 100%; height: 100%; }
+.nav-links { margin-left: auto; display: flex; align-items: center; gap: 22px; font-size: 14px; color: var(--ink-dim); }
+.nav-links a:hover { color: var(--ink); }
+.nav-cta {
+  padding: 8px 18px; border-radius: 999px;
+  background: var(--accent); color: #fff; font-weight: 600; font-size: 14px;
+  transition: background .2s, transform .2s;
+}
+.nav-cta:hover { background: var(--accent-soft); color: #0b0f1a; transform: translateY(-1px); }
+
+/* ---------- hero ---------- */
+.hero { text-align: center; padding: 96px 0 100px; position: relative; }
+.hero .whale-big {
+  width: 88px; height: 88px; margin: 0 auto 26px; display: flex; align-items: center; justify-content: center;
+  border-radius: 26px; background: linear-gradient(160deg, #16233f, #0e1424);
+  border: 1px solid var(--line); box-shadow: var(--shadow);
+  animation: float 5s ease-in-out infinite;
+}
+.hero .whale-big svg { width: 52px; height: 52px; }
+@keyframes float { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+.hero .eyebrow {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-size: 13px; color: var(--mint); letter-spacing: 2px; text-transform: uppercase;
+  border: 1px solid var(--line); padding: 6px 14px; border-radius: 999px; margin-bottom: 22px;
+  background: rgba(168,217,189,.06);
+}
+.hero h1 {
+  font-family: var(--serif); font-size: clamp(44px, 7vw, 74px); font-weight: 700; line-height: 1.1;
+  letter-spacing: 1px;
+  background: linear-gradient(120deg, #fff 30%, var(--accent-soft) 70%, var(--mint));
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+  margin-bottom: 18px;
+}
+.hero .sub {
+  font-size: clamp(17px, 2.4vw, 21px); color: var(--ink-dim); max-width: 640px; margin: 0 auto 14px;
+}
+.hero .tag {
+  font-size: 14px; color: #a9b6d6; max-width: 560px; margin: 0 auto 40px;
+}
+.hero-ctas { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; }
+.btn {
+  display: inline-flex; align-items: center; gap: 10px;
+  padding: 14px 30px; border-radius: 14px; font-size: 16px; font-weight: 600;
+  transition: transform .2s, box-shadow .2s, background .2s;
+}
+.btn-primary { background: linear-gradient(135deg, var(--accent), var(--sea)); color: #fff; box-shadow: 0 10px 30px rgba(97,135,216,.35); }
+.btn-primary:hover { transform: translateY(-2px); box-shadow: 0 14px 40px rgba(97,135,216,.5); }
+.btn-ghost { border: 1px solid var(--line); color: var(--ink-dim); background: var(--panel-2); }
+.btn-ghost:hover { border-color: var(--accent); color: var(--ink); transform: translateY(-2px); }
+
+/* ---------- hero shot ---------- */
+.hero-shot { margin: 72px auto 0; max-width: 920px; position: relative; }
+.hero-shot .frame {
+  border-radius: 16px; overflow: hidden;
+  border: 1px solid var(--line); box-shadow: 0 12px 44px rgba(0,0,0,.35);
+  background: var(--panel-2);
+}
+.hero-shot img { width: 100%; display: block; }
+.hero-shot .frame-bar {
+  display: flex; align-items: center; gap: 8px; padding: 12px 16px;
+  background: var(--panel); border-bottom: 1px solid var(--line-soft);
+}
+.frame-bar .dot { width: 11px; height: 11px; border-radius: 50%; }
+.frame-bar .r { background: #ff5f57; } .frame-bar .y { background: #febc2e; } .frame-bar .g { background: #28c840; }
+.frame-bar .addr { flex: 1; text-align: center; font-size: 12px; color: var(--ink-faint); font-family: var(--mono); }
+
+/* ---------- stats ---------- */
+.stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; margin: 80px 0; }
+.stat {
+  text-align: center; padding: 30px 20px; border-radius: var(--radius);
+  background: linear-gradient(170deg, var(--panel), var(--panel-2));
+  border: 1px solid var(--line);
+}
+.stat .num { font-family: var(--serif); font-size: 44px; font-weight: 700; color: var(--accent-soft); line-height: 1; }
+.stat .lbl { margin-top: 10px; font-size: 14px; color: var(--ink-dim); }
+.stat .hint { margin-top: 4px; font-size: 12px; color: var(--ink-faint); }
+
+/* ---------- sections ---------- */
+section { padding: 72px 0; }
+.section-label { font-size: 13px; letter-spacing: 2px; text-transform: uppercase; color: var(--sea); margin-bottom: 12px; }
+h2.sec-title { font-family: var(--serif); font-size: clamp(28px, 4vw, 38px); font-weight: 700; margin-bottom: 16px; }
+.sec-desc { color: var(--ink-dim); max-width: 640px; margin-bottom: 44px; font-size: 16px; }
+
+/* ---------- features ---------- */
+.features { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 18px; }
+.feat {
+  padding: 28px 26px; border-radius: var(--radius);
+  background: var(--panel-2); border: 1px solid var(--line-soft);
+  transition: transform .25s, border-color .25s, box-shadow .25s;
+}
+.feat:hover { transform: translateY(-4px); border-color: var(--accent); box-shadow: 0 18px 44px rgba(0,0,0,.4); }
+.feat .ic {
+  width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center;
+  font-size: 22px; background: linear-gradient(150deg, var(--panel), #16233f); border: 1px solid var(--line); margin-bottom: 16px;
+}
+.feat h3 { font-size: 17px; font-weight: 700; margin-bottom: 8px; }
+.feat p { font-size: 14px; color: var(--ink-dim); }
+
+/* ---------- agent-loop ---------- */
+.loop {
+  padding: 40px; border-radius: var(--radius);
+  background: linear-gradient(150deg, rgba(97,135,216,.12), var(--panel-2) 60%);
+  border: 1px solid var(--line);
+}
+.loop h3 { font-size: 20px; margin-bottom: 10px; display: flex; align-items: center; gap: 10px; }
+.loop .chain {
+  font-family: var(--mono); font-size: 13px; color: var(--mint);
+  background: rgba(168,217,189,.07); border: 1px solid var(--line-soft);
+  padding: 12px 16px; border-radius: 10px; margin: 16px 0;
+  word-break: break-all;
+}
+.loop .note { font-size: 13px; color: var(--amber); }
+
+/* ---------- subscribe ---------- */
+.subscribe {
+  text-align: center; padding: 60px 40px; border-radius: var(--radius);
+  background: linear-gradient(160deg, var(--panel), #0c1220);
+  border: 1px solid var(--line); position: relative; overflow: hidden;
+}
+.subscribe::before {
+  content: ""; position: absolute; inset: 0;
+  background: radial-gradient(circle at 50% 0%, rgba(97,135,216,.2), transparent 60%);
+  pointer-events: none;
+}
+.subscribe h2 { font-family: var(--serif); font-size: 30px; font-weight: 700; margin-bottom: 10px; position: relative; }
+.subscribe p { color: var(--ink-dim); margin-bottom: 30px; position: relative; }
+.sub-form { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; position: relative; max-width: 480px; margin: 0 auto; }
+.sub-form input {
+  flex: 1; min-width: 240px; padding: 14px 18px; border-radius: 12px;
+  border: 1px solid var(--line); background: var(--bg-soft); color: var(--ink);
+  font-size: 15px; outline: none;
+}
+.sub-form input:focus { border-color: var(--accent); }
+.sub-form button {
+  padding: 14px 28px; border-radius: 12px; border: none; cursor: pointer;
+  background: var(--accent); color: #fff; font-size: 15px; font-weight: 600;
+  transition: background .2s;
+}
+.sub-form button:hover { background: var(--accent-soft); }
+.sub-ok { display: none; margin-top: 16px; color: var(--mint); font-size: 15px; position: relative; }
+
+/* ---------- footer ---------- */
+footer { border-top: 1px solid var(--line-soft); padding: 40px 0 60px; color: var(--ink-faint); font-size: 13px; }
+.footer-inner { display: flex; flex-wrap: wrap; gap: 24px; justify-content: space-between; align-items: center; }
+.footer-links { display: flex; gap: 20px; }
+.footer-links a { color: var(--ink-faint); }
+.footer-links a:hover { color: var(--ink); }
+
+/* ---------- responsive ---------- */
+@media (max-width: 720px) {
+  .hero { padding: 60px 0 40px; }
+  .nav-links { display: none; }
+  .stats { grid-template-columns: 1fr; }
+  .subscribe { padding: 44px 24px; }
+  .features { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+<div class="bg-grid"></div>
+<div class="glow-orb o1"></div>
+<div class="glow-orb o2"></div>
+
+<!-- ================= NAV ================= -->
+<nav class="nav">
+  <div class="nav-inner">
+    <div class="brand">
+      <span class="whale" aria-hidden="true">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 50 50" fill="none">
+          <path d="M48.8354 10.0479C48.3232 9.79199 48.1025 10.2798 47.8032 10.5278C47.7007 10.6079 47.6143 10.7119 47.5273 10.8076C46.7793 11.624 45.9048 12.1597 44.7622 12.0957C43.0923 12 41.666 12.5356 40.4058 13.8398C40.1377 12.2319 39.2476 11.272 37.8926 10.6558C37.1836 10.3359 36.4668 10.0156 35.9702 9.31982C35.6235 8.82373 35.5293 8.27197 35.356 7.72754C35.2456 7.3999 35.1353 7.06396 34.7651 7.00781C34.3633 6.94385 34.2056 7.2876 34.0479 7.57568C33.418 8.75195 33.1733 10.0479 33.1973 11.3599C33.2524 14.312 34.4736 16.6641 36.8999 18.3359C37.1758 18.5278 37.2466 18.7197 37.1597 19C36.9946 19.5757 36.7974 20.1357 36.624 20.7119C36.5137 21.0801 36.3486 21.1597 35.9624 21C34.6309 20.4321 33.481 19.5918 32.4644 18.5757C30.7393 16.8721 29.1792 14.9917 27.2334 13.52C26.7764 13.1758 26.3193 12.856 25.8467 12.5518C23.8618 10.584 26.1069 8.96777 26.627 8.77588C27.1704 8.57568 26.8159 7.8877 25.0591 7.896C23.3022 7.90381 21.6953 8.50391 19.647 9.30371C19.3477 9.42383 19.0322 9.51172 18.7095 9.58398C16.8501 9.22363 14.9199 9.14355 12.9033 9.37598C9.10596 9.80762 6.07275 11.6396 3.84326 14.7681C1.16455 18.5278 0.53418 22.7998 1.30664 27.2559C2.11768 31.9521 4.46582 35.8398 8.07373 38.8799C11.8159 42.0322 16.1255 43.5762 21.041 43.2803C24.0269 43.104 27.3516 42.6963 31.1016 39.4561C32.0469 39.936 33.0396 40.1279 34.686 40.272C35.9546 40.3921 37.1758 40.208 38.1211 40.0078C39.6021 39.688 39.4995 38.2881 38.9639 38.0322C34.623 35.9678 35.5762 36.8081 34.71 36.1279C36.9155 33.4639 40.2402 30.6958 41.54 21.728C41.6426 21.0161 41.5557 20.5679 41.54 19.9917C41.5322 19.6396 41.6108 19.5039 42.0049 19.4639C43.0923 19.3359 44.1479 19.0317 45.1167 18.4878C47.9292 16.9199 49.064 14.3438 49.3315 11.2559C49.3711 10.7837 49.3237 10.2959 48.8354 10.0479ZM24.3262 37.8398C20.1196 34.4639 18.0791 33.3521 17.2358 33.3999C16.4482 33.4482 16.5898 34.3682 16.7632 34.9678C16.9443 35.5601 17.1812 35.9683 17.5117 36.4878C17.7402 36.832 17.8979 37.3442 17.2832 37.728C15.9282 38.584 13.5728 37.4399 13.4624 37.3838C10.7207 35.7358 8.42822 33.5601 6.81348 30.584C5.25342 27.7197 4.34766 24.6479 4.19775 21.3677C4.1582 20.5757 4.38672 20.2959 5.15869 20.1519C6.17529 19.96 7.22314 19.9199 8.23926 20.0718C12.5327 20.7119 16.1885 22.6719 19.2529 25.7759C21.002 27.5439 22.3252 29.6558 23.6885 31.7202C25.1377 33.9121 26.6978 36 28.6831 37.7119C29.3843 38.312 29.9434 38.7681 30.479 39.104C28.8643 39.2881 26.1699 39.3281 24.3262 37.8398ZM26.3433 24.6001C26.3433 24.248 26.6191 23.9678 26.9658 23.9678C27.0444 23.9678 27.1152 23.9839 27.1782 24.0078C27.2651 24.04 27.3438 24.0879 27.4067 24.1602C27.5171 24.272 27.5801 24.4321 27.5801 24.6001C27.5801 24.9521 27.3042 25.2319 26.9575 25.2319C26.6108 25.2319 26.3433 24.9521 26.3433 24.6001ZM32.6064 27.8799C32.2046 28.0479 31.8027 28.1919 31.4165 28.208C30.8179 28.2397 30.1641 27.9922 29.8096 27.688C29.2583 27.2158 28.8643 26.9521 28.6987 26.1279C28.6279 25.7759 28.6675 25.2319 28.7305 24.9199C28.8721 24.248 28.7144 23.8159 28.2495 23.4238C27.8716 23.104 27.3911 23.0161 26.8633 23.0161C26.666 23.0161 26.4849 22.9277 26.3511 22.856C26.1304 22.7441 25.9492 22.4639 26.1226 22.1201C26.1777 22.0078 26.4458 21.7358 26.5088 21.688C27.2256 21.272 28.0527 21.4077 28.8169 21.7197C29.5259 22.0161 30.0615 22.5601 30.834 23.3281C31.6216 24.2559 31.7632 24.5117 32.2124 25.208C32.5669 25.752 32.8901 26.312 33.1104 26.9521C33.2446 27.3521 33.0713 27.6802 32.6064 27.8799Z" fill="#8fb0ee"/>
+        </svg>
+      </span>
+      TDSH
+    </div>
+    <div class="nav-links">
+      <a href="#features">特性</a>
+      <a href="#loop">agent-loop</a>
+      <a href="https://github.com/tuantuan0218/TDSH" target="_blank" rel="noopener">GitHub</a>
+      <a href="#subscribe">订阅</a>
+      <a class="nav-cta" href="https://github.com/tuantuan0218/TDSH/releases" target="_blank" rel="noopener">下载</a>
+    </div>
+  </div>
+</nav>
+
+<!-- ================= HERO ================= -->
+<header class="hero">
+  <div class="container">
+    <div class="whale-big" aria-hidden="true">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 50 50" fill="none">
+        <path d="M48.8354 10.0479C48.3232 9.79199 48.1025 10.2798 47.8032 10.5278C47.7007 10.6079 47.6143 10.7119 47.5273 10.8076C46.7793 11.624 45.9048 12.1597 44.7622 12.0957C43.0923 12 41.666 12.5356 40.4058 13.8398C40.1377 12.2319 39.2476 11.272 37.8926 10.6558C37.1836 10.3359 36.4668 10.0156 35.9702 9.31982C35.6235 8.82373 35.5293 8.27197 35.356 7.72754C35.2456 7.3999 35.1353 7.06396 34.7651 7.00781C34.3633 6.94385 34.2056 7.2876 34.0479 7.57568C33.418 8.75195 33.1733 10.0479 33.1973 11.3599C33.2524 14.312 34.4736 16.6641 36.8999 18.3359C37.1758 18.5278 37.2466 18.7197 37.1597 19C36.9946 19.5757 36.7974 20.1357 36.624 20.7119C36.5137 21.0801 36.3486 21.1597 35.9624 21C34.6309 20.4321 33.481 19.5918 32.4644 18.5757C30.7393 16.8721 29.1792 14.9917 27.2334 13.52C26.7764 13.1758 26.3193 12.856 25.8467 12.5518C23.8618 10.584 26.1069 8.96777 26.627 8.77588C27.1704 8.57568 26.8159 7.8877 25.0591 7.896C23.3022 7.90381 21.6953 8.50391 19.647 9.30371C19.3477 9.42383 19.0322 9.51172 18.7095 9.58398C16.8501 9.22363 14.9199 9.14355 12.9033 9.37598C9.10596 9.80762 6.07275 11.6396 3.84326 14.7681C1.16455 18.5278 0.53418 22.7998 1.30664 27.2559C2.11768 31.9521 4.46582 35.8398 8.07373 38.8799C11.8159 42.0322 16.1255 43.5762 21.041 43.2803C24.0269 43.104 27.3516 42.6963 31.1016 39.4561C32.0469 39.936 33.0396 40.1279 34.686 40.272C35.9546 40.3921 37.1758 40.208 38.1211 40.0078C39.6021 39.688 39.4995 38.2881 38.9639 38.0322C34.623 35.9678 35.5762 36.8081 34.71 36.1279C36.9155 33.4639 40.2402 30.6958 41.54 21.728C41.6426 21.0161 41.5557 20.5679 41.54 19.9917C41.5322 19.6396 41.6108 19.5039 42.0049 19.4639C43.0923 19.3359 44.1479 19.0317 45.1167 18.4878C47.9292 16.9199 49.064 14.3438 49.3315 11.2559C49.3711 10.7837 49.3237 10.2959 48.8354 10.0479ZM24.3262 37.8398C20.1196 34.4639 18.0791 33.3521 17.2358 33.3999C16.4482 33.4482 16.5898 34.3682 16.7632 34.9678C16.9443 35.5601 17.1812 35.9683 17.5117 36.4878C17.7402 36.832 17.8979 37.3442 17.2832 37.728C15.9282 38.584 13.5728 37.4399 13.4624 37.3838C10.7207 35.7358 8.42822 33.5601 6.81348 30.584C5.25342 27.7197 4.34766 24.6479 4.19775 21.3677C4.1582 20.5757 4.38672 20.2959 5.15869 20.1519C6.17529 19.96 7.22314 19.9199 8.23926 20.0718C12.5327 20.7119 16.1885 22.6719 19.2529 25.7759C21.002 27.5439 22.3252 29.6558 23.6885 31.7202C25.1377 33.9121 26.6978 36 28.6831 37.7119C29.3843 38.312 29.9434 38.7681 30.479 39.104C28.8643 39.2881 26.1699 39.3281 24.3262 37.8398ZM26.3433 24.6001C26.3433 24.248 26.6191 23.9678 26.9658 23.9678C27.0444 23.9678 27.1152 23.9839 27.1782 24.0078C27.2651 24.04 27.3438 24.0879 27.4067 24.1602C27.5171 24.272 27.5801 24.4321 27.5801 24.6001C27.5801 24.9521 27.3042 25.2319 26.9575 25.2319C26.6108 25.2319 26.3433 24.9521 26.3433 24.6001ZM32.6064 27.8799C32.2046 28.0479 31.8027 28.1919 31.4165 28.208C30.8179 28.2397 30.1641 27.9922 29.8096 27.688C29.2583 27.2158 28.8643 26.9521 28.6987 26.1279C28.6279 25.7759 28.6675 25.2319 28.7305 24.9199C28.8721 24.248 28.7144 23.8159 28.2495 23.4238C27.8716 23.104 27.3911 23.0161 26.8633 23.0161C26.666 23.0161 26.4849 22.9277 26.3511 22.856C26.1304 22.7441 25.9492 22.4639 26.1226 22.1201C26.1777 22.0078 26.4458 21.7358 26.5088 21.688C27.2256 21.272 28.0527 21.4077 28.8169 21.7197C29.5259 22.0161 30.0615 22.5601 30.834 23.3281C31.6216 24.2559 31.7632 24.5117 32.2124 25.208C32.5669 25.752 32.8901 26.312 33.1104 26.9521C33.2446 27.3521 33.0713 27.6802 32.6064 27.8799Z" fill="#eef3ff"/>
+      </svg>
+    </div>
+    <div class="eyebrow">DeepSeek Harness · 原生桌面壳</div>
+    <h1>TDSH</h1>
+    <p class="sub">把 DeepSeek Harness 的 Web 界面装进一个原生窗口，双击即用。</p>
+    <p class="tag">自动更新 · agent-loop 无限续跑 · 磁盘友善 · 单实例锁 —— 一个属于你自己的 AI 工作台</p>
+    <div class="hero-ctas">
+      <a class="btn btn-primary" href="https://github.com/tuantuan0218/TDSH/releases" target="_blank" rel="noopener">⬇ 下载 TDSH</a>
+      <a class="btn btn-ghost" href="https://github.com/tuantuan0218/TDSH" target="_blank" rel="noopener">查看 GitHub</a>
+    </div>
+
+    <div class="hero-shot">
+      <div class="frame">
+        <div class="frame-bar">
+          <span class="dot r"></span><span class="dot y"></span><span class="dot g"></span>
+          <span class="addr">localhost · DeepSeek Harness</span>
+        </div>
+        <img src="shot.png" alt="TDSH 主界面截图" loading="lazy" />
+      </div>
+    </div>
+  </div>
+</header>
+
+<!-- ================= STATS ================= -->
+<div class="container">
+  <div class="stats">
+    <div class="stat">
+      <div class="num">133<span style="font-size:22px">min</span></div>
+      <div class="lbl">连续自主运行</div>
+      <div class="hint">agent-loop 实测 · 零停止</div>
+    </div>
+    <div class="stat">
+      <div class="num">21</div>
+      <div class="lbl">目标全部完成</div>
+      <div class="hint">单次会话 · deepseek-v4-flash</div>
+    </div>
+    <div class="stat">
+      <div class="num">0</div>
+      <div class="lbl">中途停止</div>
+      <div class="hint">GPT / Claude 风格永不 yield</div>
+    </div>
+  </div>
+</div>
+
+<!-- ================= FEATURES ================= -->
+<section id="features">
+  <div class="container">
+    <div class="section-label">Features</div>
+    <h2 class="sec-title">为什么选 TDSH</h2>
+    <p class="sec-desc">把 DeepSeek Harness 的完整能力带进一个原生桌面窗口，既有浏览器的灵活性，又有桌面应用的顺滑。</p>
+
+    <div class="features">
+      <div class="feat">
+        <div class="ic">🔄</div>
+        <h3>一键自动更新</h3>
+        <p>检测到新版本即弹出确认，后台下载显示进度条，下载完成后自动安装替换，无需手动折腾。</p>
+      </div>
+      <div class="feat">
+        <div class="ic">⏳</div>
+        <h3>agent-loop 无限续跑</h3>
+        <p>删除 autoContinued 守卫，模型永不 yield —— 目标完成自动派生下一个，长任务一路跑到底。</p>
+      </div>
+      <div class="feat">
+        <div class="ic">💾</div>
+        <h3>磁盘友善</h3>
+        <p>所有数据落盘在应用目录，不写系统盘，长时间运行也不怕 C 盘爆掉。</p>
+      </div>
+      <div class="feat">
+        <div class="ic">🔗</div>
+        <h3>attach-or-spawn</h3>
+        <p>检测本地 dsh web 是否已运行：已运行直接开窗复用，否则自动拉起新实例，绝不重复占用端口。</p>
+      </div>
+      <div class="feat">
+        <div class="ic">🐋</div>
+        <h3>DeepSeek 鲸鱼闪屏</h3>
+        <p>启动时显示官方鲸鱼 Logo 与「探索未至之境」动画，窗口加载完成后自动关闭。</p>
+      </div>
+      <div class="feat">
+        <div class="ic">🔒</div>
+        <h3>单实例锁</h3>
+        <p>防止重复启动；关闭窗口自动回收子进程，干净退出不留后台残留。</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= AGENT-LOOP ================= -->
+<section id="loop">
+  <div class="container">
+    <div class="loop">
+      <h3>⚡ 关键能力：agent-loop 无限自动续跑</h3>
+      <p class="sec-desc" style="margin-bottom:12px">模型完成一个目标后不会停下，而是自动进入下一轮 —— 一个真正无人值守、持续产出的 agent。</p>
+      <div class="chain">目标完成 → complete_goal → goal-complete-inject → MCTS → 新目标 → 循环</div>
+      <p class="note">⚠️ 该补丁不在 TDSH 安装包内，需手动应用。备份位于仓库 <code style="font-family:var(--mono)">harness-patches/agent-loop/</code>。</p>
+    </div>
+  </div>
+</section>
+
+<!-- ================= SUBSCRIBE ================= -->
+<section id="subscribe">
+  <div class="container">
+    <div class="subscribe">
+      <h2>订阅更新</h2>
+      <p>新版本发布、agent-loop 补丁更新、使用技巧 —— 第一时间送到你的邮箱。</p>
+      <form class="sub-form" id="subForm">
+        <input type="email" name="email" placeholder="your@email.com" required />
+        <button type="submit">订阅</button>
+      </form>
+      <div class="sub-ok" id="subOk">✓ 订阅成功，感谢支持！</div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= FOOTER ================= -->
+<footer>
+  <div class="container">
+    <div class="footer-inner">
+      <div>© 2026 tuantuan0218 · <a href="LICENSE" target="_blank">MIT License</a></div>
+      <div class="footer-links">
+        <a href="https://github.com/tuantuan0218/TDSH" target="_blank" rel="noopener">GitHub</a>
+        <a href="https://github.com/tuantuan0218/TDSH/releases" target="_blank" rel="noopener">Releases</a>
+        <a href="https://github.com/tuantuan0218/TDSH/blob/main/README.md" target="_blank" rel="noopener">README</a>
+      </div>
+    </div>
+    <div style="margin-top:18px;color:var(--ink-faint);font-size:12px;line-height:1.7">
+      应用图标与闪屏使用的 DeepSeek 鲸鱼 Logo 版权归 DeepSeek 所有。本项目为非官方个人项目，与 DeepSeek 无隶属关系。
+    </div>
+  </div>
+</footer>
+
+<script>
+document.getElementById('subForm').addEventListener('submit', function (e) {
+  e.preventDefault();
+  var email = this.elements.email.value.trim();
+  if (!email) return;
+  // 订阅收集：目前前端占位。接入真实端点后在此提交 email。
+  var ok = document.getElementById('subOk');
+  ok.style.display = 'block';
+  this.style.display = 'none';
+  setTimeout(function () { ok.style.display = 'none'; this.style.display = 'flex'; }, 4000);
+});
+</script>
+</body>
+</html>
